@@ -1,0 +1,125 @@
+#!/bin/bash
+#
+#   snapper by swordfischer :)
+#   2011-08-17
+#
+#   Distributed under "THE BEER-WARE LICENSE" (Revision 42)"
+#+  swordfischer wrote this file. As long as you retain this notice you
+#+  can do whatever you want with this stuff. If we meet some day, and you think
+#+  this stuff is worth it, you can buy me a beer in return.
+#
+#
+
+DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
+FILE="screenshot_${DATE}.png"
+
+if [ ! -r ${HOME}/.snapperrc ];
+then
+	if [ ! -d "${HOME}/screenshots" ];
+	then
+	mkdir ${HOME}/screenshots
+	fi
+cat << EOF > ${HOME}/.snapperrc
+# Snapper Config File
+AREA="screen"
+HOST="localhost"
+DEST="${HOME}/screenshots"
+EOF
+fi
+
+source ${HOME}/.snapperrc
+
+function oh_snap() {
+cat <<End-of-message
+Usage: snapper [OPTION]...
+
+  -h		defines host
+			either localhost or remote host. 			
+  -d		defines destination 		
+			default is ${HOME}
+  -a		defines area:			
+			screen     (entire screen)
+			window     (selected window)
+			selection  (selection)
+
+  -n		toggles whether to notify via notify-send
+			defauls is off
+  -l		defines the URL
+			default is screenshot_${DATE}.png
+
+      -?	display this help and exit
+
+Examples:
+  snapper
+			Checks for .snapperrc, and screenshots folder, otherwise creates it
+			and gives defaults values, and snap, a screenshot
+  snapper -h localhost -a screen
+			Takes a screenshot of the entire screen
+			and saves to home dir.
+  snapper -h host.tld -a window -n -l https://host.tld
+	         	Takes a screenshot of a selected window
+			and copy the url (https://host.tld/${FILE})
+			to the clipboard, then notifies.
+End-of-message
+exit
+}
+
+function snap() {
+	import ${LOCATION} /tmp/screenshot_${DATE}.png
+        if  [[ "${HOST}" = "localhost" ]];
+        then
+        SAVELOC="Saved locally.";
+		mv /tmp/screenshot_${DATE}.png $DEST/screenshot_${DATE}.png;
+        exit
+        fi
+
+        if  [[ "${HOST}" != "localhost" ]];
+        then
+        SAVELOC="Saved on remote host:\n${HOST}";
+		scp /tmp/screenshot_${DATE}.png ${HOST}:${DEST}/screenshot_${DATE}.png
+		rm /tmp/screenshot_${DATE}.png
+        	echo "${LINK}" | xclip;
+        fi
+
+        if [ "${NOTIFY}" = 0 ];
+        then
+                notify-send -u low "Screenshot Taken" "${REA}.\n${SAVELOC}";
+        fi
+}
+
+
+while getopts ":h:d:a:nl:?:" Option
+do
+	case $Option in
+	h  ) HOST=${OPTARG};;
+	d  ) DEST=${OPTARG};;
+	a  ) AREA=${OPTARG};;
+	n  ) NOTIFY="0";;
+	l  ) LINK=${OPTARG}/${FILE};;
+	?  ) oh_snap;;
+	*  ) oh_snap;;
+	esac
+done
+if [[ ! -z "${HOST}" ]];
+then
+	if [[ -z "${AREA}" ]];
+	then
+	echo "You need to specify an area (-a)";
+	exit
+	fi
+	if [[ -z "${DEST}" ]];
+	then
+		DEST=${HOME};
+	fi
+else
+echo "You need to specify a host (-h)";
+exit
+fi
+
+case ${AREA} in
+	window    ) LOCATION="-frame"; AREA="Current Window";;
+	selection ) LOCATION=""; AREA="Selected Area";;
+	screen    ) LOCATION="-window root"; AREA="Entire Screen";;
+esac
+
+snap		
