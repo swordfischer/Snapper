@@ -9,9 +9,8 @@
 #+  this stuff is worth it, you can buy me a beer in return.
 #
 
-
 DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
-FILE="screenshot_${DATE}.png"
+FILE="ss_${DATE}.png"
 
 if [ ! -r ${HOME}/.snapperrc ];
 then
@@ -27,10 +26,29 @@ DEST="${HOME}/screenshots"
 EOF
 fi
 
+if command -v xclip; then
+        GOT_XCLIP=1
+	else
+	echo "Missing xclip";
+fi
+if command -v import; then
+        GOT_IMPORT=1
+	else
+	echo "Missing imagemagick. Aborting";
+	exit 1;
+fi
+if command -v notify-send; then
+        GOT_NOTIFY=1
+	else
+	echo "Missing notify-send"
+fi
+
+
 source ${HOME}/.snapperrc
 
+
 function oh_snap() {
-cat <<End-of-message
+cat << EOF
 Usage: snapper [OPTION]...
 
   -h		defines host
@@ -60,30 +78,38 @@ Examples:
 	         	Takes a screenshot of a selected window
 			and copy the url (https://host.tld/${FILE})
 			to the clipboard, then notifies.
-End-of-message
+EOF
 exit
 }
 
 function snap() {
-	import ${LOCATION} /tmp/screenshot_${DATE}.png
+	import ${LOCATION} /tmp/ss_${DATE}.png
         if  [[ "${HOST}" = "localhost" ]];
         then
         SAVELOC="Saved locally.";
-		mv /tmp/screenshot_${DATE}.png $DEST/screenshot_${DATE}.png;
+		mv /tmp/ss_${DATE}.png $DEST/ss_${DATE}.png;
         exit
         fi
 
         if  [[ "${HOST}" != "localhost" ]];
         then
         SAVELOC="Saved on remote host:\n${HOST}";
-		scp /tmp/screenshot_${DATE}.png ${HOST}:${DEST}/screenshot_${DATE}.png
-		rm /tmp/screenshot_${DATE}.png
-        	echo "${LINK}" | xclip;
+		scp /tmp/ss_${DATE}.png ${HOST}:${DEST}/ss_${DATE}.png
+		rm /tmp/ss_${DATE}.png
+		if [[ "${GOT_XCLIP}" = 1 ]]; then
+	        	echo "${LINK}" | xclip;
+		fi
         fi
 
-        if [ "${NOTIFY}" = 0 ];
+        if [ "${NOTIFY}" = 1 ];
         then
-                notify-send -u low "Screenshot Taken" "${REA}.\n${SAVELOC}";
+		if [ "${GOT_NOTIFY}" = 1]
+		then
+	                notify-send -u low "Screenshot Taken" "${REA}.\n${SAVELOC}";
+		else
+			echo "You do not have notify-send"
+		fi
+
         fi
 }
 
