@@ -113,7 +113,6 @@ function snap() {
         fi
 }
 
-
 while getopts ":h:d:a:nl:?:" Option
 do
 	case $Option in
