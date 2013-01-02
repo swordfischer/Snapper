@@ -104,7 +104,7 @@ function snap() {
         then
 		if [ "${GOT_NOTIFY}" = 1]
 		then
-	                notify-send -u low "Screenshot Taken" "${REA}.\n${SAVELOC}";
+	                notify-send -u low "Screenshot Taken" "${AREA}.\n${SAVELOC}";
 		else
 			echo "You do not have notify-send"
 		fi
