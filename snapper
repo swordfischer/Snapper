@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 #   snapper by swordfischer :)
 #   2011-08-17
@@ -9,8 +9,8 @@
 #+  this stuff is worth it, you can buy me a beer in return.
 #
 DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
-FILE="ss_${DATE}.png"
-
+FILELOC=/tmp
+FILE=""
 if [ ! -r ${HOME}/.snapperrc ];
 then
 	if [ ! -d "${HOME}/screenshots" ];
@@ -36,12 +36,11 @@ if command -v import; then
 	echo "Missing imagemagick. Aborting";
 	exit 1;
 fi
-if command -v notify-send; then
-        GOT_NOTIFY=1
+if command -v rsync; then
+	RXFER="rsync"
 	else
-	echo "Missing notify-send"
+	RXFER="scp"
 fi
-
 
 source ${HOME}/.snapperrc
 
@@ -50,6 +49,10 @@ function oh_snap() {
 cat << EOF
 Usage: snapper [OPTION]...
 
+  -c		defines whether to screencast or screenshot
+			video		(ffmpeg screencast)
+			screenshot	(xwd/import screenshot)
+
   -h		defines host
 			either localhost or remote host. 			
   -d		defines destination 		
@@ -57,14 +60,12 @@ Usage: snapper [OPTION]...
   -a		defines area:			
 			screen     (entire screen)
 			window     (selected window)
-			selection  (selection)
+			selection  (selection) ! NOT FOR VIDEO
 
-  -n		toggles whether to notify via notify-send
-			defauls is off
   -l		defines the URL
 			default is screenshot_${DATE}.png
 
-      -?	display this help and exit
+  -?			display this help and exit
 
 Examples:
   snapper
@@ -81,44 +82,79 @@ EOF
 exit
 }
 
-function snap() {
-	import ${LOCATION} /tmp/ss_${DATE}.png
-        if  [[ "${HOST}" = "localhost" ]];
+function move() {
+FILE=$1
+LINK=$2
+if  [[ "${HOST}" = "localhost" ]];
         then
-        SAVELOC="Saved locally.";
-		mv /tmp/ss_${DATE}.png $DEST/ss_${DATE}.png;
+                mv ${FILELOC}/${FILE} $DEST/${FILE};
         exit
         fi
 
         if  [[ "${HOST}" != "localhost" ]];
         then
-        SAVELOC="Saved on remote host:\n${HOST}";
-		scp /tmp/ss_${DATE}.png ${HOST}:${DEST}/ss_${DATE}.png
-		rm /tmp/ss_${DATE}.png
-		if [[ "${GOT_XCLIP}" = 1 ]]; then
-	        	echo "${LINK}" | xclip;
-		fi
-        fi
-
-        if [ "${NOTIFY}" = 1 ];
-        then
-		if [ "${GOT_NOTIFY}" = 1]
-		then
-	                notify-send -u low "Screenshot Taken" "${AREA}.\n${SAVELOC}";
-		else
-			echo "You do not have notify-send"
-		fi
-
+                ${RXFER} ${FILELOC}/${FILE} ${HOST}:${DEST}/${FILE};
+                rm ${FILELOC}/${FILE};
+                if [[ "${GOT_XCLIP}" = 1 ]]; then
+                        echo "${LINK}/${FILE}" | xclip;
+                fi
         fi
 }
 
-while getopts ":h:d:a:nl:?:" Option
+function record() {
+	FILE=sc_${DATE}.mp4;
+	if [[ ${LOCATION} == "screen" ]];
+	then
+		RECINFO=$(xwininfo -root);
+	elif [[ ${LOCATION} == "window" ]];
+	then
+                RECINFO=$(xwininfo -frame);
+	fi
+        WIN_GEOMETRY=$(echo "$RECINFO"|grep --color=none -e "Height:" -e "Width:"|sed "s/[^0-9]//g"|tr "\n" " "|awk '{print $1 "x" $2}');
+        WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
+
+	THREADS=0;
+	AUDIO=alsa;
+	CHANNELS=2;
+	SOUNDCARD=pulse;
+	FPS=30;
+	CRF=20;
+
+	## SERIOUSLY! Do yourself a favor and figure out another way to do this.
+	## Do not spawn urxvt to be able to cancel the capture..	
+	urxvt -g 50x4 -e ffmpeg -f ${AUDIO} -ac ${CHANNELS} -i ${SOUNDCARD} -f x11grab -r ${FPS} \
+	-s ${WIN_GEOMETRY} -i :0.0+${WIN_POSITION} -vcodec libx264 -preset ultrafast -crf ${CRF} \
+	-acodec libmp3lame -ab 256k -ar 44100 -f mp4 -threads 0 ${FILELOC}/${FILE};
+	move ${FILE} ${LINK};
+	## Also 'First!'
+}
+
+function snap() {
+        if [[ ${LOCATION} == "screen" ]];
+        then
+                LOCATION="-root";
+        elif [[ ${LOCATION} == "window" ]];
+        then
+                LOCATION="-frame";
+        fi
+
+	FILE=ss_${DATE}.png;
+	if [[ ${LOCATION} = "" ]];
+	then
+	import ${LOCATION} ${FILELOC}/${FILE};
+	else
+	xwd ${LOCATION} | convert - ${FILELOC}/${FILE};
+	fi
+	move ${FILE} ${LINK};
+}
+
+while getopts ":c:h:d:a:l:?:" Option
 do
 	case $Option in
+	c  ) CAPTURE=${OPTARG};;
 	h  ) HOST=${OPTARG};;
 	d  ) DEST=${OPTARG};;
 	a  ) AREA=${OPTARG};;
-	n  ) NOTIFY="0";;
 	l  ) LINK=${OPTARG}/${FILE};;
 	?  ) oh_snap;;
 	*  ) oh_snap;;
@@ -141,9 +177,12 @@ exit
 fi
 
 case ${AREA} in
-	window    ) LOCATION="-frame"; AREA="Current Window";;
-	selection ) LOCATION=""; AREA="Selected Area";;
-	screen    ) LOCATION="-window root"; AREA="Entire Screen";;
+	window    ) LOCATION="window";;
+	selection ) LOCATION="";;
+	screen    ) LOCATION="screen";;
 esac
 
-snap		
+case ${CAPTURE} in
+	video	  ) CAPTURE="video"; record;;
+	screenshot) CAPTURE="screenshot"; snap;;
+esac
