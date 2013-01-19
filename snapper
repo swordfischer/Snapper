@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
 FILELOC=/tmp
 FILE=""
