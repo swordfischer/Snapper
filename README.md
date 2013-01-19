@@ -15,38 +15,41 @@ Dependencies
 Usage
 -----
 
-Usage: snapper [OPTION]...
+    Usage: snapper [OPTION]...
 
-  -c        defines whether to screencast or screenshot
+      -c    defines whether to screencast or screenshot
             video       (ffmpeg screencast)
             screenshot  (xwd/import screenshot)
 
-  -h        defines host
+      -h    defines host
             either localhost or remote host.            
-  -d        defines destination         
+            
+      -d    defines destination         
             default is ${HOME}
-  -a        defines area:           
+            
+      -a    defines area:           
             screen     (entire screen)
             window     (selected window)
             selection  (selection) ! NOT FOR VIDEO
 
-  -l        defines the URL
+      -l    defines the URL
             default is screenshot_${DATE}.png
 
-  -?            display this help and exit
+      -?    display this help and exit
 
-Examples:
-  snapper
+    Examples:
+      snapper
             Checks for .snapperrc, and screenshots folder, otherwise creates it
             and gives defaults values, and snap, a screenshot
-  snapper -h localhost -a screen
+            
+      snapper -h localhost -a screen
             Takes a screenshot of the entire screen
             and saves to home dir.
-  snapper -h host.tld -a window -l https://host.tld
+            
+      snapper -h host.tld -a window -l https://host.tld
                 Takes a screenshot of a selected window
             and copy the url (https://host.tld/${FILE})
             to the clipboard.
-
 
 License
 -------
