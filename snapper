@@ -144,7 +144,7 @@ function snap() {
 	LOCATION="-frame";
     elif [[ ${LOCATION} == "active" ]]; then
 	ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
-	LOCATION="-id ${ACTIVE_WIN} -frame"
+	LOCATION="-frame -id ${ACTIVE_WIN}"
     fi
 
 	FILE=ss_${DATE}.png;
