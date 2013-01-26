@@ -141,7 +141,10 @@ function snap() {
     if [[ ${LOCATION} == "screen" ]]; then
 	LOCATION="-root";
     elif [[ ${LOCATION} == "window" ]]; then
-    LOCATION="-frame";
+	LOCATION="-frame";
+    elif [[ ${LOCATION} == "active" ]]; then
+	ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
+	LOCATION="-id ${ACTIVE_WIN} -frame"
     fi
 
 	FILE=ss_${DATE}.png;
@@ -179,6 +182,7 @@ fi
 
 case ${AREA} in
 	window    ) LOCATION="window";;
+	active	  ) LOCATION="active";;
 	selection ) LOCATION="";;
 	screen    ) LOCATION="screen";;
 esac
