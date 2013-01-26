@@ -3,6 +3,7 @@ DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
 FILELOC=/tmp
 FILE=""
 CONFIGDIR="${HOME}/.config/snapper"
+ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
 
 if [ ! -d ${CONFIGDIR} ]; then
 mkdir ${CONFIGDIR}
@@ -60,39 +61,7 @@ source ${CONFIGDIR}/snapperrc
 
 
 function oh_snap() {
-cat << EOF
-Usage: snapper [OPTION]...
-
-  -c		defines whether to screencast or screenshot
-			video		(ffmpeg screencast)
-			screenshot	(xwd/import screenshot)
-
-  -h		defines host
-			either localhost or remote host. 			
-  -d		defines destination 		
-			default is ${HOME}
-  -a		defines area:			
-			screen     (entire screen)
-			window     (selected window)
-			selection  (selection) ! NOT FOR VIDEO
-
-  -l		defines the URL
-			default is screenshot_${DATE}.png
-
-  -?			display this help and exit
-
-Examples:
-  snapper
-			Checks for .snapperrc, and screenshots folder, otherwise creates it
-			and gives defaults values, and snap, a screenshot
-  snapper -h localhost -a screen
-			Takes a screenshot of the entire screen
-			and saves to home dir.
-  snapper -h host.tld -a window -l https://host.tld
-	         	Takes a screenshot of a selected window
-			and copy the url (https://host.tld/${FILE})
-			to the clipboard.
-EOF
+echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|selection>] [-l URL] [-?]";
 exit
 }
 
@@ -117,11 +86,11 @@ function record() {
 	FILE=sc_${DATE}.mp4;
 	if [[ ${LOCATION} == "screen" ]]; then
 		RECINFO=$(xwininfo -root);
-	elif [[ ${LOCATION} == "window" ]];	then
+	elif [[ ${LOCATION} == "window" ]]; then
                 RECINFO=$(xwininfo -frame);
 	fi
-    WIN_GEOMETRY=$(echo "$RECINFO"|grep --color=none -e "Height:" -e "Width:"|sed "s/[^0-9]//g"|tr "\n" " "|awk '{print $1 "x" $2}');
-    WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
+	WIN_GEOMETRY=$(echo "$RECINFO"|grep --color=none -e "Height:" -e "Width:"|sed "s/[^0-9]//g"|tr "\n" " "|awk '{print $1 "x" $2}');
+    	WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
 
 	THREADS=0;
 	AUDIO=alsa;
@@ -131,7 +100,7 @@ function record() {
 	CRF=20;
 	
 	checkterms
-	${TERMINAL} -geomtry 50x4 -e ffmpeg -f ${AUDIO} -ac ${CHANNELS} -i ${SOUNDCARD} -f x11grab -r ${FPS} \
+	${TERMINAL} -geometry 50x4 -e ffmpeg -f ${AUDIO} -ac ${CHANNELS} -i ${SOUNDCARD} -f x11grab -r ${FPS} \
 	-s ${WIN_GEOMETRY} -i :0.0+${WIN_POSITION} -vcodec libx264 -preset ultrafast -crf ${CRF} \
 	-acodec libmp3lame -ab 256k -ar 44100 -f mp4 -threads 0 ${FILELOC}/${FILE};
 	move ${FILE} ${LINK};
@@ -143,7 +112,6 @@ function snap() {
     elif [[ ${LOCATION} == "window" ]]; then
 	LOCATION="-frame";
     elif [[ ${LOCATION} == "active" ]]; then
-	ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
 	LOCATION="-frame -id ${ACTIVE_WIN}"
     fi
 
