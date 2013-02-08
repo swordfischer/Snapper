@@ -10,14 +10,14 @@ mkdir ${CONFIGDIR}
 fi
 
 if [ ! -r ${CONFDIR}/.snapperrc ]; then
-	if [ ! -d "${HOME}/screenshots" ]; then
+	if [ ! -d "${HOME}/.local/share/snapper/" ]; then
 	mkdir ${HOME}/screenshots
 	fi
 cat << EOF > ${CONFIGDIR}/snapperrc
 # Snapper Config File
 AREA="screen"
 HOST="localhost"
-DEST="${HOME}/screenshots"
+DEST="${HOME}/.local/share/snapper/"
 EOF
 fi
 
