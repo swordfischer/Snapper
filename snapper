@@ -11,7 +11,7 @@ fi
 
 if [ ! -r ${CONFDIR}/.snapperrc ]; then
 	if [ ! -d "${HOME}/.local/share/snapper/" ]; then
-	mkdir ${HOME}/screenshots
+	mkdir -p ${HOME}/.local/share/snapper/
 	fi
 cat << EOF > ${CONFIGDIR}/snapperrc
 # Snapper Config File
