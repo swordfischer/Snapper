@@ -77,7 +77,7 @@ if  [[ "${HOST}" = "localhost" ]]; then
                 ${RXFER} ${FILELOC}/${FILE} ${HOST}:${DEST}${FILE};
                 rm ${FILELOC}/${FILE};
                 if [[ "${GOT_XCLIP}" = 1 ]]; then
-                        echo "${LINK}${FILE}" | xclip;
+                        echo -n "${LINK}${FILE}" | xclip;
                 fi
         fi
 }
