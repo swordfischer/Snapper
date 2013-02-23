@@ -23,12 +23,12 @@ if [ ! -r ${CONFDIR}/.snapperrc ]; then
 	if [ ! -d "${HOME}/.local/share/snapper/" ]; then
 		mkdir -p ${HOME}/.local/share/snapper/
 	fi
-	cat << EOF > ${CONFIGDIR}/snapperrc
-	# Snapper Config File
-	AREA="screen"
-	HOST="localhost"
-	DEST="${HOME}/.local/share/snapper/"
-	EOF
+cat << EOF > ${CONFIGDIR}/snapperrc
+# Snapper Config File
+AREA="screen"
+HOST="localhost"
+DEST="${HOME}/.local/share/snapper/"
+EOF
 fi
 
 function checkterms() {
@@ -41,18 +41,18 @@ function checkterms() {
 	done
 }
 
-if command -v xclip; then
+if command -v xclip &>/dev/null; then
         GOT_XCLIP=1
 	else
 		echo "Missing xclip";
 fi
-if command -v import; then
+if command -v import &>/dev/null; then
         GOT_IMPORT=1
 	else
 		echo "Missing imagemagick. Aborting";
 		exit 1;
 fi
-if command -v rsync; then
+if command -v rsync &>/dev/null; then
 	RXFER="rsync"
 	else
 	RXFER="scp"
