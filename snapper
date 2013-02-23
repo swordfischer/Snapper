@@ -1,55 +1,56 @@
 #!/bin/bash
-DATE="$(date +%Y-%m-%d_%H-%M-%S)-$(($(date +%N | sed 's/^0//')/10000000))"
+RANDOM="$(for i in {1..6}; do echo -n $(echo "obase=16; $(($RANDOM % 16))" | bc); done)"
+DATE="$(date +%F_%T)-${RANDOM}"
 FILELOC=/tmp
 FILE=""
 CONFIGDIR="${HOME}/.config/snapper"
 ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
 
+# FFMPEG Settings
+THREADS=0;
+AUDIO=alsa;
+CHANNELS=2;
+SOUNDCARD=pulse;
+FPS=30;
+CRF=20;
+# 
+
 if [ ! -d ${CONFIGDIR} ]; then
-mkdir ${CONFIGDIR}
+	mkdir ${CONFIGDIR}
 fi
 
 if [ ! -r ${CONFDIR}/.snapperrc ]; then
 	if [ ! -d "${HOME}/.local/share/snapper/" ]; then
-	mkdir -p ${HOME}/.local/share/snapper/
+		mkdir -p ${HOME}/.local/share/snapper/
 	fi
-cat << EOF > ${CONFIGDIR}/snapperrc
-# Snapper Config File
-AREA="screen"
-HOST="localhost"
-DEST="${HOME}/.local/share/snapper/"
-EOF
+	cat << EOF > ${CONFIGDIR}/snapperrc
+	# Snapper Config File
+	AREA="screen"
+	HOST="localhost"
+	DEST="${HOME}/.local/share/snapper/"
+	EOF
 fi
-
-function check() {
-if command -v $1; then
-        return "1"
-        else
-        return "0"
-fi
-}
 
 function checkterms() {
-TERMS=(rxvt urxvt xterm uxterm aterm konsole gnome-terminal)
-for i in "${TERMS[@]}"; do
-        check $i
-        if [ $? == 1  ]; then
+	TERMS=(rxvt urxvt xterm uxterm aterm konsole gnome-terminal)
+	for i in "${TERMS[@]}"; do
+		if command -v $i &>/dev/null; then
                 TERMINAL="$i"
                 break
         fi
-done
+	done
 }
 
 if command -v xclip; then
         GOT_XCLIP=1
 	else
-	echo "Missing xclip";
+		echo "Missing xclip";
 fi
 if command -v import; then
         GOT_IMPORT=1
 	else
-	echo "Missing imagemagick. Aborting";
-	exit 1;
+		echo "Missing imagemagick. Aborting";
+		exit 1;
 fi
 if command -v rsync; then
 	RXFER="rsync"
@@ -59,27 +60,25 @@ fi
 
 source ${CONFIGDIR}/snapperrc
 
-
 function oh_snap() {
-echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|selection>] [-l URL] [-?]";
-exit
+	echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|selection>] [-l URL] [-?]";
+	exit
 }
 
 function move() {
-FILE=$1
-LINK=$2
-if  [[ "${HOST}" = "localhost" ]]; then
-                mv ${FILELOC}/${FILE} ${DEST}${FILE};
-        exit
-        fi
-
-        if  [[ "${HOST}" != "localhost" ]]; then
-                ${RXFER} ${FILELOC}/${FILE} ${HOST}:${DEST}${FILE};
-                rm ${FILELOC}/${FILE};
-                if [[ "${GOT_XCLIP}" = 1 ]]; then
-                        echo -n "${LINK}${FILE}" | xclip;
-                fi
-        fi
+	FILE=$1
+	LINK=$2
+	if  [[ "${HOST}" = "localhost" ]]; then
+			mv ${FILELOC}/${FILE} ${DEST}${FILE};
+			exit
+	fi
+	if  [[ "${HOST}" != "localhost" ]]; then
+		${RXFER} ${FILELOC}/${FILE} ${HOST}:${DEST}${FILE};
+		rm ${FILELOC}/${FILE};
+		if [[ "${GOT_XCLIP}" = 1 ]]; then
+			echo -n "${LINK}${FILE}" | xclip;
+	   	fi
+	fi
 }
 
 function record() {
@@ -87,17 +86,10 @@ function record() {
 	if [[ ${LOCATION} == "screen" ]]; then
 		RECINFO=$(xwininfo -root);
 	elif [[ ${LOCATION} == "window" ]]; then
-                RECINFO=$(xwininfo -frame);
+        RECINFO=$(xwininfo -frame);
 	fi
 	WIN_GEOMETRY=$(echo "$RECINFO"|grep --color=none -e "Height:" -e "Width:"|sed "s/[^0-9]//g"|tr "\n" " "|awk '{print $1 "x" $2}');
-    	WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
-
-	THREADS=0;
-	AUDIO=alsa;
-	CHANNELS=2;
-	SOUNDCARD=pulse;
-	FPS=30;
-	CRF=20;
+    WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
 	
 	checkterms
 	${TERMINAL} -geometry 50x4 -e ffmpeg -f ${AUDIO} -ac ${CHANNELS} -i ${SOUNDCARD} -f x11grab -r ${FPS} \
@@ -108,44 +100,44 @@ function record() {
 
 function snap() {
     if [[ ${LOCATION} == "screen" ]]; then
-	LOCATION="-root";
+		LOCATION="-root";
     elif [[ ${LOCATION} == "window" ]]; then
-	LOCATION="-frame";
+		LOCATION="-frame";
     elif [[ ${LOCATION} == "active" ]]; then
-	LOCATION="-frame -id ${ACTIVE_WIN}"
+		LOCATION="-frame -id ${ACTIVE_WIN}"
     fi
-
 	FILE=ss_${DATE}.png;
 	if [[ ${LOCATION} = "" ]]; then
-	import ${LOCATION} ${FILELOC}/${FILE}; else
-	xwd ${LOCATION} | convert - ${FILELOC}/${FILE};
+		import ${LOCATION} ${FILELOC}/${FILE}; else
+		xwd ${LOCATION} | convert - ${FILELOC}/${FILE};
 	fi
 	move ${FILE} ${LINK};
 }
 
 while getopts ":c:h:d:a:l:?:" Option
-do
-	case $Option in
-	c  ) CAPTURE=${OPTARG};;
-	h  ) HOST=${OPTARG};;
-	d  ) DEST=${OPTARG};;
-	a  ) AREA=${OPTARG};;
-	l  ) LINK=${OPTARG}/${FILE};;
-	?  ) oh_snap;;
-	*  ) oh_snap;;
-	esac
-done
+	do
+		case $Option in
+		c  ) CAPTURE=${OPTARG};;
+		h  ) HOST=${OPTARG};;
+		d  ) DEST=${OPTARG};;
+		a  ) AREA=${OPTARG};;
+		l  ) LINK=${OPTARG}/${FILE};;
+		?  ) oh_snap;;
+		*  ) oh_snap;;
+		esac
+	done
+
 if [[ ! -z "${HOST}" ]]; then
 	if [[ -z "${AREA}" ]]; then
-	echo "You need to specify an area (-a)";
+		echo "You need to specify an area (-a)";
 	exit
 	fi
 	if [[ -z "${DEST}" ]]; then
 		DEST=${HOME};
 	fi
-else
-echo "You need to specify a host (-h)";
-exit
+	else
+		echo "You need to specify a host (-h)";
+	exit
 fi
 
 case ${AREA} in
