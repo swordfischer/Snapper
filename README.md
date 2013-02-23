@@ -54,5 +54,5 @@ Usage
 
 License
 -------
-DelugeAutotransfer is licensed under the [MIT License](http://en.wikipedia.org/wiki/MIT_License)  
+Snapper is licensed under the [MIT License](http://en.wikipedia.org/wiki/MIT_License)  
 The full license text is available in [LICENSE.md](https://github.com/swordfischer/snapper/blob/master/LICENSE.md)
