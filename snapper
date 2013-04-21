@@ -1,10 +1,11 @@
 #!/bin/bash
-RANDOM="$(for i in {1..6}; do echo -n $(echo "obase=16; $(($RANDOM % 16))" | bc); done)"
-DATE="$(date +%F_%T)-${RANDOM}"
+RAND="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)"
+#RANDOM="$(for i in {1..6}; do echo -n $(echo "obase=16; $(($RANDOM % 16))" | bc); done)"
+DATE="$(date +%F_%H-%M-%S)-${RAND}"
 FILELOC=/tmp
 FILE=""
 CONFIGDIR="${HOME}/.config/snapper"
-ACTIVE_WIN=$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}');
+ACTIVE_WIN="$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}')"
 
 # FFMPEG Settings
 THREADS=0;
@@ -61,7 +62,7 @@ fi
 source ${CONFIGDIR}/snapperrc
 
 function oh_snap() {
-	echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|selection>] [-l URL] [-?]";
+	echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|select>] [-l URL] [-?]";
 	exit
 }
 
@@ -143,7 +144,7 @@ fi
 case ${AREA} in
 	window    ) LOCATION="window";;
 	active	  ) LOCATION="active";;
-	selection ) LOCATION="";;
+	select    ) LOCATION="";;
 	screen    ) LOCATION="screen";;
 esac
 
