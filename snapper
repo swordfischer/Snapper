@@ -1,11 +1,11 @@
 #!/bin/bash
 RAND="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)"
-#RANDOM="$(for i in {1..6}; do echo -n $(echo "obase=16; $(($RANDOM % 16))" | bc); done)"
 DATE="$(date +%F_%H-%M-%S)-${RAND}"
 FILELOC=/tmp
 FILE=""
 CONFIGDIR="${HOME}/.config/snapper"
 ACTIVE_WIN="$(xprop -root | grep --color=none "_NET_ACTIVE_WINDOW(WINDOW)" | awk '{print $5}')"
+
 
 # FFMPEG Settings
 THREADS=0;
@@ -14,13 +14,12 @@ CHANNELS=2;
 SOUNDCARD=pulse;
 FPS=30;
 CRF=20;
-# 
 
 if [ ! -d ${CONFIGDIR} ]; then
 	mkdir ${CONFIGDIR}
 fi
 
-if [ ! -r ${CONFDIR}/.snapperrc ]; then
+if [ ! -r ${CONFIGDIR}/snapperrc ]; then
 	if [ ! -d "${HOME}/.local/share/snapper/" ]; then
 		mkdir -p ${HOME}/.local/share/snapper/
 	fi
@@ -36,23 +35,24 @@ function checkterms() {
 	TERMS=(rxvt urxvt xterm uxterm aterm konsole gnome-terminal)
 	for i in "${TERMS[@]}"; do
 		if command -v $i &>/dev/null; then
-                TERMINAL="$i"
-                break
-        fi
+			TERMINAL="$i"
+			break
+		fi
 	done
 }
 
 if command -v xclip &>/dev/null; then
-        GOT_XCLIP=1
+	GOT_XCLIP=1
 	else
-		echo "Missing xclip";
+	echo "Missing xclip";
 fi
 if command -v import &>/dev/null; then
-        GOT_IMPORT=1
+	GOT_IMPORT=1
 	else
-		echo "Missing imagemagick. Aborting";
-		exit 1;
+	echo "Missing imagemagick. Aborting";
+	exit 1;
 fi
+
 if command -v rsync &>/dev/null; then
 	RXFER="rsync"
 	else
@@ -62,7 +62,7 @@ fi
 source ${CONFIGDIR}/snapperrc
 
 function oh_snap() {
-	echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|select>] [-l URL] [-?]";
+	echo "Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen [-m n]|window|active|select>] [-l URL] [-?]";
 	exit
 }
 
@@ -78,7 +78,7 @@ function move() {
 		rm ${FILELOC}/${FILE};
 		if [[ "${GOT_XCLIP}" = 1 ]]; then
 			echo -n "${LINK}${FILE}" | xclip;
-	   	fi
+		fi
 	fi
 }
 
@@ -87,10 +87,10 @@ function record() {
 	if [[ ${LOCATION} == "screen" ]]; then
 		RECINFO=$(xwininfo -root);
 	elif [[ ${LOCATION} == "window" ]]; then
-        RECINFO=$(xwininfo -frame);
+		RECINFO=$(xwininfo -frame);
 	fi
 	WIN_GEOMETRY=$(echo "$RECINFO"|grep --color=none -e "Height:" -e "Width:"|sed "s/[^0-9]//g"|tr "\n" " "|awk '{print $1 "x" $2}');
-    WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
+	WIN_POSITION=$(echo "$RECINFO"|grep --color=none "upper-left"|head -n 2|cut -d\: -f2|tr "\n" " "|awk '{print $1 "," $2}');
 	
 	checkterms
 	${TERMINAL} -geometry 50x4 -e ffmpeg -f ${AUDIO} -ac ${CHANNELS} -i ${SOUNDCARD} -f x11grab -r ${FPS} \
@@ -100,27 +100,30 @@ function record() {
 }
 
 function snap() {
-    if [[ ${LOCATION} == "screen" ]]; then
-		LOCATION="-root";
-    elif [[ ${LOCATION} == "window" ]]; then
+echo ${LOCATION}
+	if [[ ${LOCATION} == "screen" ]]; then
+		LOCATION="-window root";
+		if [[ -n ${MONITOR} ]]; then
+			IFS=' :x@,' read w h x y <<< $(xdpyinfo -ext XINERAMA | sed "/^  head #${MONITOR}: /!d;s///")
+				LOCATION="-window root -crop ${w}x${h}+${x}+${y}";
+		fi
+	elif [[ ${LOCATION} == "window" ]]; then
 		LOCATION="-frame";
-    elif [[ ${LOCATION} == "active" ]]; then
+	elif [[ ${LOCATION} == "active" ]]; then
 		LOCATION="-frame -id ${ACTIVE_WIN}"
-    fi
-	FILE=ss_${DATE}.png;
-	if [[ ${LOCATION} = "" ]]; then
-		import ${LOCATION} ${FILELOC}/${FILE}; else
-		xwd ${LOCATION} | convert - ${FILELOC}/${FILE};
 	fi
+	FILE=ss_${DATE}.png;
+	import ${LOCATION} ${FILELOC}/${FILE}
 	move ${FILE} ${LINK};
 }
 
-while getopts ":c:h:d:a:l:?:" Option
+while getopts ":c:h:d:m:a:l:?:" Option
 	do
 		case $Option in
 		c  ) CAPTURE=${OPTARG};;
 		h  ) HOST=${OPTARG};;
 		d  ) DEST=${OPTARG};;
+		m  ) MONITOR=${OPTARG};;
 		a  ) AREA=${OPTARG};;
 		l  ) LINK=${OPTARG}/${FILE};;
 		?  ) oh_snap;;
@@ -143,12 +146,12 @@ fi
 
 case ${AREA} in
 	window    ) LOCATION="window";;
-	active	  ) LOCATION="active";;
+	active    ) LOCATION="active";;
 	select    ) LOCATION="";;
 	screen    ) LOCATION="screen";;
 esac
 
 case ${CAPTURE} in
-	video	  ) CAPTURE="video"; record;;
+	video     ) CAPTURE="video"; record;;
 	screenshot) CAPTURE="screenshot"; snap;;
 esac
