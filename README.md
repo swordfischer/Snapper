@@ -15,7 +15,7 @@ Dependencies
 Usage
 -----
 
-    Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen|window|active|select>] [-l URL] [-?]
+    Usage: snapper [-c <video|screenshot>] [-h host] [-d destination] [-a <screen [-m n]|window|active|select>] [-l URL] [-?]
 
       -c    defines whether to screencast or screenshot
             video       (ffmpeg screencast)
@@ -29,6 +29,8 @@ Usage
             
       -a    defines area:           
             screen     (entire screen)
+                -m     defines the monitor:
+                                (starts from 0)
             window     (selected window)
             active     (active window) ! NOT FOR VIDEO
             select     (selection) ! NOT FOR VIDEO
